@@ -32,6 +32,7 @@ extern "C" {
 #define SSDV_HAVE_PACKET (2)
 #define SSDV_BUFFER_FULL (3)
 #define SSDV_EOI         (4)
+#define SSDV_PARTIAL     (5)
 
 /* Packet details */
 #define SSDV_PKT_SIZE         (0x100)

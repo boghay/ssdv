@@ -27,8 +27,8 @@
 void exit_usage()
 {
 	fprintf(stderr,
-		"Usage: ssdv-cbec [-e|-d] [-n] [-t <percentage>] [-c <callsign>]"
-            " [-i <id>] [<in file>] [<out file>]\n"
+		"Usage: ssdv-cbec [-e|-d] [-n] [-b] [-p] [-t <percentage>]"
+            " [-c <callsign>] [-i <id>] [<in file>] [<out file>]\n"
 		"\n"
 		"  -e Encode data to SSDV packets.\n"
 		"  -d Decode SSDV packets to data.\n"
@@ -36,6 +36,7 @@ void exit_usage()
 		"  -n Encode packets with no FEC.\n"
 		"  -b Use original SSDV packet types (0x66 and 0x67) for "
             "backwards compatibility.\n"
+        "  -p Output partial data when decoding\n"
 		"  -t For testing, drops the specified percentage of packets while "
             "decoding.\n"
 		"  -c Set the callign. Accepts A-Z 0-9 and space, up to 6 characters.\n"
@@ -53,6 +54,7 @@ int main(int argc, char *argv[])
 	char encode = -1;
 	char type = SSDV_TYPE_CBEC;
     char use_oldtype = 0;
+    char output_partials = 0;
 	int droptest = 0;
 	int verbose = 0;
 	int errors;
@@ -75,6 +77,7 @@ int main(int argc, char *argv[])
 		case 'd': encode = 0; break;
         case 'n': type = SSDV_TYPE_CBEC_NOFEC; break;
         case 'b': use_oldtype = 1; break;
+        case 'p': output_partials = 1; break;
 		case 'c':
 			if(strlen(optarg) > 6)
 				fprintf(stderr,
@@ -180,7 +183,16 @@ int main(int argc, char *argv[])
 		c = ssdv_dec_recover_data(&ssdv);
 
         /* recovery operation may fail */
-        /* but we should still output what we have */
+        if ((c != SSDV_OK) && (c != SSDV_PARTIAL)) {
+            /* general failure */
+            fprintf(stderr, "Error recovering data\n");
+            break;
+        } else if (c == SSDV_PARTIAL && !output_partials) {
+            /* don't accept partials */
+            fprintf(stderr, "Partial data recovered, "
+                    "use -p to output anyhow\n");
+            break;
+        }
 
         /* Write out received data */
         uint8_t* out_ptr;

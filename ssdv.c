@@ -418,17 +418,27 @@ char ssdv_dec_feed(ssdv_t *s, uint8_t *packet)
  */
 char ssdv_dec_recover_data(ssdv_t *s)
 {
-    uint8_t seq;
+    uint8_t seq, partial = 0;
 
     for (seq = 0; seq < s->sequences; seq++) {
 
+        /* note if sequence is partial */
+        if (s->cbec_blocks_counts[seq] < s->blocks) {
+            partial = 1;
+        }
         /* attempt to recover */
         if (cm256_decode(s->params, &s->cbec_matrix[(seq*256)])) {
-            return(SSDV_ERROR);
+            if(!partial) {      /* we expect partials to error */
+                return(SSDV_ERROR);
+            }
         }
     }
 
-	return(SSDV_OK);
+    if (partial) {
+        return(SSDV_PARTIAL);
+    } else {
+        return(SSDV_OK);
+    }
 }
 
 /**
