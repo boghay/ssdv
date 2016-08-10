@@ -352,7 +352,7 @@ char ssdv_dec_set_buffer(ssdv_t *s, uint8_t *buffer, size_t length)
 char ssdv_dec_feed(ssdv_t *s, uint8_t *packet)
 {
 	uint8_t seq, index, count;
-	uint16_t packet_id;
+	uint16_t packet_id, j;
 
 	/* Read the packet header */
 	packet_id            = (packet[7] << 8) | packet[8];
@@ -391,8 +391,17 @@ char ssdv_dec_feed(ssdv_t *s, uint8_t *packet)
     /* record leftovers */
     s->leftovers[seq] = packet[12];
 
-    /* Fill in this packet in the CBEC matrix */
+    /* get the current matrix insertion count for this sequence */
     count = s->cbec_blocks_counts[seq];
+
+    /* check if we already have this index, if so discard and continue */
+    for (j = 0; j < count; j++) {
+        if (s->cbec_matrix[(seq*256)+j].Index == index) {
+            return (SSDV_FEED_ME);
+        }
+    }
+
+    /* otherwise fill in this packet in the CBEC matrix */
     s->cbec_matrix[(seq*256)+count].Block = s->outp;
     s->cbec_matrix[(seq*256)+count].Index = index;
     s->cbec_blocks_counts[seq]++;
